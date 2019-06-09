@@ -9,7 +9,7 @@ import os
 import PIL
 import PIL.Image
 import sys
-
+import cv2
 try:
 	from sepconv import sepconv # the custom separable convolution layer
 except:
@@ -145,7 +145,7 @@ def estimate(tensorFirst, tensorSecond):
 	intPreprocessedHeight = int(math.floor(51 / 2.0)) + intHeight + int(math.floor(51 / 2.0))
 
 	if intPreprocessedWidth != ((intPreprocessedWidth >> 7) << 7):
-		intPreprocessedWidth = (((intPreprocessedWidth >> 7) + 1) << 7) - intPreprocessedWidth # more than necessary
+            intPreprocessedWidth = (((intPreprocessedWidth >> 7) + 1) << 7) - intPreprocessedWidth # more than necessary
 	# end
 	
 	if intPreprocessedHeight != ((intPreprocessedHeight >> 7) << 7):
@@ -158,13 +158,56 @@ def estimate(tensorFirst, tensorSecond):
 	return torch.nn.functional.pad(input=moduleNetwork(tensorPreprocessedFirst, tensorPreprocessedSecond), pad=[ 0 - int(math.floor(51 / 2.0)), 0 - int(math.floor(51 / 2.0)) - intPreprocessedWidth, 0 - int(math.floor(51 / 2.0)), 0 - int(math.floor(51 / 2.0)) - intPreprocessedHeight ], mode='replicate')[0, :, :, :].cpu()
 # end
 
+
+# inp1, inp2: numpy array
+class Ganerate:
+    def __init__(self):
+        self.images = []
+
+    def genreate33(self, inp1, inp2):
+        # convert to numpy array, the value of each pixel is between 0.0 and 1.0
+
+        self.images.append(inp1.numpy())
+        self.images.append(inp2.numpy())
+        
+        # default input is torch tensor
+        inp1, inp2 = torch.tensor(inp1), torch.tensor(inp2)
+        self.recursion(inp1,inp2,4)
+        avg = numpy.average(numpy.array(self.images),0)
+
+        print(len(self.images)) # 33
+        self.images=[]
+
+        # save image , Delete it!
+        for idx, img in enumerate(self.images):
+            PIL.Image.fromarray((torch.tensor(img).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] *
+                255.0).astype(numpy.uint8)).save("%d.png"%idx)
+        #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
+        
+        return avg
+
+
+        pass
+
+    def recursion(self, img1, img3, num):
+        if num < 0:
+            return
+        img2 = estimate(img1, img3)
+        self.recursion(img1, img2, num-1)
+        self.images.append(img2.numpy())
+        self.recursion(img2, img3, num-1)
+
+
 ##########################################################
 
 if __name__ == '__main__':
-	tensorFirst = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strFirst))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
-	tensorSecond = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strSecond))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+    tensorFirst = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strFirst))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+    tensorSecond = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strSecond))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
 
-	tensorOutput = estimate(tensorFirst, tensorSecond)
+    tensorOutput = estimate(tensorFirst, tensorSecond)
 
-	PIL.Image.fromarray((tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
+    gg = Ganerate()
+    gg.genreate33(tensorFirst, tensorOutput)
+
+	#PIL.Image.fromarray((tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
 # end
