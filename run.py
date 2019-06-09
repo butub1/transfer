@@ -26,17 +26,17 @@ torch.backends.cudnn.enabled = True # make sure to use cudnn for computational p
 
 ##########################################################
 
-arguments_strModel = 'l1'
-arguments_strFirst = './images/first.png'
-arguments_strSecond = './images/second.png'
-arguments_strOut = './out.png'
+#arguments_strModel = 'l1'
+#arguments_strFirst = './images/first.png'
+#arguments_strSecond = './images/second.png'
+#arguments_strOut = './out.png'
 
-for strOption, strArgument in getopt.getopt(sys.argv[1:], '', [ strParameter[2:] + '=' for strParameter in sys.argv[1::2] ])[0]:
-	if strOption == '--model' and strArgument != '': arguments_strModel = strArgument # which model to use, l1 or lf, please see our paper for more details
-	if strOption == '--first' and strArgument != '': arguments_strFirst = strArgument # path to the first frame
-	if strOption == '--second' and strArgument != '': arguments_strSecond = strArgument # path to the second frame
-	if strOption == '--out' and strArgument != '': arguments_strOut = strArgument # path to where the output should be stored
-# end
+#for strOption, strArgument in getopt.getopt(sys.argv[1:], '', [ strParameter[2:] + '=' for strParameter in sys.argv[1::2] ])[0]:
+#	if strOption == '--model' and strArgument != '': arguments_strModel = strArgument # which model to use, l1 or lf, please see our paper for more details
+#	if strOption == '--first' and strArgument != '': arguments_strFirst = strArgument # path to the first frame
+#	if strOption == '--second' and strArgument != '': arguments_strSecond = strArgument # path to the second frame
+#	if strOption == '--out' and strArgument != '': arguments_strOut = strArgument # path to where the output should be stored
+## end
 
 ##########################################################
 
@@ -97,7 +97,8 @@ class Network(torch.nn.Module):
 		self.moduleHorizontal1 = Subnet()
 		self.moduleHorizontal2 = Subnet()
 
-		self.load_state_dict(torch.load('./network-' + arguments_strModel + '.pytorch'))
+		#self.load_state_dict(torch.load('./network-' + arguments_strModel + '.pytorch'))
+		self.load_state_dict(torch.load('./network-' + 'l1' + '.pytorch'))
 	# end
 
 	def forward(self, tensorFirst, tensorSecond):
@@ -124,11 +125,10 @@ class Network(torch.nn.Module):
 	# end
 # end
 
-moduleNetwork = Network().cuda().eval()
 
 ##########################################################
 
-def estimate(tensorFirst, tensorSecond):
+def estimate(tensorFirst, tensorSecond, moduleNetwork):
 	assert(tensorFirst.size(1) == tensorSecond.size(1))
 	assert(tensorFirst.size(2) == tensorSecond.size(2))
 
@@ -162,12 +162,13 @@ def estimate(tensorFirst, tensorSecond):
 
 def generate33(inp1, inp2, inp3):
 
+    network = Network().cuda().eval()
     images = []
 
     def recursion(img1, img3, num):
         if num < 0:
             return
-        img2 = estimate(img1, img3)
+        img2 = estimate(img1, img3, network)
         recursion(img1, img2, num-1)
         images.append(img2.numpy())
         recursion(img2, img3, num-1)
@@ -205,9 +206,9 @@ if __name__ == '__main__':
     tensorMid = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strOut))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
 
 
-    tensorOutput = estimate(tensorFirst, tensorSecond)
+    #tensorOutput = estimate(tensorFirst, tensorSecond)
 
-    genreate33(tensorFirst, tensorOutput, tensorSecond)
+    generate33(tensorFirst, tensorMid, tensorSecond)
 
 	#PIL.Image.fromarray((tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
 # end
