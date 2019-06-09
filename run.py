@@ -26,7 +26,7 @@ torch.backends.cudnn.enabled = True # make sure to use cudnn for computational p
 
 ##########################################################
 
-arguments_strModel = 'lf'
+arguments_strModel = 'l1'
 arguments_strFirst = './images/first.png'
 arguments_strSecond = './images/second.png'
 arguments_strOut = './out.png'
@@ -147,7 +147,7 @@ def estimate(tensorFirst, tensorSecond):
 	if intPreprocessedWidth != ((intPreprocessedWidth >> 7) << 7):
             intPreprocessedWidth = (((intPreprocessedWidth >> 7) + 1) << 7) - intPreprocessedWidth # more than necessary
 	# end
-	
+
 	if intPreprocessedHeight != ((intPreprocessedHeight >> 7) << 7):
 		intPreprocessedHeight = (((intPreprocessedHeight >> 7) + 1) << 7) - intPreprocessedHeight # more than necessary
 	# end
@@ -159,43 +159,42 @@ def estimate(tensorFirst, tensorSecond):
 # end
 
 
-# inp1, inp2: numpy array
-class Ganerate:
-    def __init__(self):
-        self.images = []
 
-    def genreate33(self, inp1, inp2):
-        # convert to numpy array, the value of each pixel is between 0.0 and 1.0
+def generate33(inp1, inp2, inp3):
 
-        self.images.append(inp1.numpy())
-        self.images.append(inp2.numpy())
-        
-        # default input is torch tensor
-        inp1, inp2 = torch.tensor(inp1), torch.tensor(inp2)
-        self.recursion(inp1,inp2,4)
-        avg = numpy.average(numpy.array(self.images),0)
+    images = []
 
-        print(len(self.images)) # 33
-        self.images=[]
-
-        # save image , Delete it!
-        for idx, img in enumerate(self.images):
-            PIL.Image.fromarray((torch.tensor(img).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] *
-                255.0).astype(numpy.uint8)).save("%d.png"%idx)
-        #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
-        
-        return avg
-
-
-        pass
-
-    def recursion(self, img1, img3, num):
+    def recursion(img1, img3, num):
         if num < 0:
             return
         img2 = estimate(img1, img3)
-        self.recursion(img1, img2, num-1)
-        self.images.append(img2.numpy())
-        self.recursion(img2, img3, num-1)
+        recursion(img1, img2, num-1)
+        images.append(img2.numpy())
+        recursion(img2, img3, num-1)
+    # convert to numpy array, the value of each pixel is between 0.0 and 1.0
+    images.append(inp1)
+    images.append(inp2)
+    images.append(inp3)
+
+
+    # default input is torch tensor
+    inp1, inp2, inp3 = torch.tensor(inp1), torch.tensor(inp2), torch.tensor(inp3)
+    recursion(inp1,inp2,3)
+    recursion(inp2,inp3,3)
+
+    avg = numpy.average(numpy.array(images),0)
+
+    #print(len(images)) # 33
+
+    # save image , Delete it!
+    #for idx, img in enumerate(images):
+    #    PIL.Image.fromarray((torch.tensor(img).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] *
+    #        255.0).astype(numpy.uint8)).save("%d.png"%idx)
+    #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
+
+    return avg
+
+
 
 
 ##########################################################
@@ -203,11 +202,12 @@ class Ganerate:
 if __name__ == '__main__':
     tensorFirst = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strFirst))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
     tensorSecond = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strSecond))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+    tensorMid = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strOut))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+
 
     tensorOutput = estimate(tensorFirst, tensorSecond)
 
-    gg = Ganerate()
-    gg.genreate33(tensorFirst, tensorOutput)
+    genreate33(tensorFirst, tensorOutput, tensorSecond)
 
 	#PIL.Image.fromarray((tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
 # end
