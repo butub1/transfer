@@ -22,7 +22,9 @@ def generate_func(triplet, model=None):
     img1 = img1[h:h+MIN_HEIGHT, w:w+MIN_WIDTH]
     img2 = img2[h:h+MIN_HEIGHT, w:w+MIN_WIDTH]
     img3 = img3[h:h+MIN_HEIGHT, w:w+MIN_WIDTH]
+    print('input', img1.mean())
     gt = generate33(img1, img2, img3, model)
+    print('output', gt.mean())
 
     base_path = '/mnt/lustre/niuyazhe/data/syn_data/' + triplet[0].split('/')[-2] + triplet[0].split('/')[-1].split('.')[0]
     img1_path = base_path + '_1.jpg'
@@ -55,12 +57,12 @@ def main():
         else:
             triplet_list.append([path1, path2, path3])
 
-    pool = Pool(4)
+    #pool = Pool(4)
     model = get_video_interp_model()
     func = partial(generate_func, model=model)
-    triplet_train_list = pool.map(func, triplet_list)
-    #triplet_train_list = []
-    #triplet_train_list.append(func(triplet_list[0]))
+    #triplet_train_list = pool.map(func, triplet_list)
+    triplet_train_list = []
+    triplet_train_list.append(func(triplet_list[0]))
     print('total count', len(triplet_train_list))
     with open(output_frames_path, 'w', encoding='utf-8') as f:
         f.writelines(triplet_train_list)

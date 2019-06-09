@@ -4,7 +4,7 @@ import torch
 
 import getopt
 import math
-import numpy
+import np as np
 import os
 import PIL
 import PIL.Image
@@ -160,9 +160,9 @@ def get_video_interp_model():
 
 
 def generate33(inp1, inp2, inp3, network):
-    inp1 = torch.from_numpy(inp1).float().permute(2, 0, 1)
-    inp2 = torch.from_numpy(inp2).float().permute(2, 0, 1)
-    inp3 = torch.from_numpy(inp3).float().permute(2, 0, 1)
+    inp1 = torch.from_np(inp1).float().permute(2, 0, 1)/255
+    inp2 = torch.from_np(inp2).float().permute(2, 0, 1)/255
+    inp3 = torch.from_np(inp3).float().permute(2, 0, 1)/255
 
     network.cuda()
     images = []
@@ -175,7 +175,7 @@ def generate33(inp1, inp2, inp3, network):
         recursion(img1, img2, num-1)
         images.append(img2)
         recursion(img2, img3, num-1)
-    # convert to numpy array, the value of each pixel is between 0.0 and 1.0
+    # convert to np array, the value of each pixel is between 0.0 and 1.0
     images.append(inp1)
     images.append(inp2)
     images.append(inp3)
@@ -185,18 +185,21 @@ def generate33(inp1, inp2, inp3, network):
     recursion(inp1,inp2,3)
     recursion(inp2,inp3,3)
 
+    print(inp1.mean())
+    print(images[0].mean())
     avg = torch.stack(images, dim=0)
     avg = avg.mean(dim=0)
+    print(avg.mean())
 
     #print(len(images)) # 33
 
     # save image , Delete it!
     #for idx, img in enumerate(images):
-    #    PIL.Image.fromarray((torch.tensor(img).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] *
-    #        255.0).astype(numpy.uint8)).save("%d.png"%idx)
-    #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
+    #    PIL.Image.fromarray((torch.tensor(img).clamp(0.0, 1.0).np().transpose(1, 2, 0)[:, :, ::-1] *
+    #        255.0).astype(np.uint8)).save("%d.png"%idx)
+    #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).np().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(np.uint8)).save(arguments_strOut)
 
-    return avg.permute(1, 2, 0).numpy()
+    return (avg.permute(1, 2, 0).np()*255).astype(np.uint8)
 
 
 
@@ -204,14 +207,14 @@ def generate33(inp1, inp2, inp3, network):
 ##########################################################
 
 if __name__ == '__main__':
-    tensorFirst = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strFirst))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
-    tensorSecond = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strSecond))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
-    tensorMid = torch.FloatTensor(numpy.array(PIL.Image.open(arguments_strOut))[:, :, ::-1].transpose(2, 0, 1).astype(numpy.float32) * (1.0 / 255.0))
+    tensorFirst = torch.FloatTensor(np.array(PIL.Image.open(arguments_strFirst))[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) * (1.0 / 255.0))
+    tensorSecond = torch.FloatTensor(np.array(PIL.Image.open(arguments_strSecond))[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) * (1.0 / 255.0))
+    tensorMid = torch.FloatTensor(np.array(PIL.Image.open(arguments_strOut))[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) * (1.0 / 255.0))
 
 
     #tensorOutput = estimate(tensorFirst, tensorSecond)
 
     generate33(tensorFirst, tensorMid, tensorSecond)
 
-	#PIL.Image.fromarray((tensorOutput.clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
+	#PIL.Image.fromarray((tensorOutput.clamp(0.0, 1.0).np().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(np.uint8)).save(arguments_strOut)
 # end
