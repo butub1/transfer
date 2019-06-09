@@ -18,11 +18,7 @@ except:
 
 ##########################################################
 
-assert(int(str('').join(torch.__version__.split('.')[0:3])) >= 41) # requires at least pytorch version 0.4.1
 
-torch.set_grad_enabled(False) # make sure to not compute gradients for computational performance
-
-torch.backends.cudnn.enabled = True # make sure to use cudnn for computational performance
 
 ##########################################################
 
@@ -98,7 +94,7 @@ class Network(torch.nn.Module):
 		self.moduleHorizontal2 = Subnet()
 
 		#self.load_state_dict(torch.load('./network-' + arguments_strModel + '.pytorch'))
-		self.load_state_dict(torch.load('./network-' + 'l1' + '.pytorch'))
+		self.load_state_dict(torch.load('./network-' + 'l1' + '.pytorch', map_location='cpu'))
 	# end
 
 	def forward(self, tensorFirst, tensorSecond):
@@ -158,19 +154,26 @@ def estimate(tensorFirst, tensorSecond, moduleNetwork):
 	return torch.nn.functional.pad(input=moduleNetwork(tensorPreprocessedFirst, tensorPreprocessedSecond), pad=[ 0 - int(math.floor(51 / 2.0)), 0 - int(math.floor(51 / 2.0)) - intPreprocessedWidth, 0 - int(math.floor(51 / 2.0)), 0 - int(math.floor(51 / 2.0)) - intPreprocessedHeight ], mode='replicate')[0, :, :, :].cpu()
 # end
 
+def get_video_interp_model():
+    network = Network().eval()
+    return network
 
 
-def generate33(inp1, inp2, inp3):
+def generate33(inp1, inp2, inp3, network):
+    inp1 = torch.from_numpy(inp1).float().permute(2, 0, 1)
+    inp2 = torch.from_numpy(inp2).float().permute(2, 0, 1)
+    inp3 = torch.from_numpy(inp3).float().permute(2, 0, 1)
 
-    network = Network().cuda().eval()
+    network.cuda()
     images = []
 
     def recursion(img1, img3, num):
         if num < 0:
             return
-        img2 = estimate(img1, img3, network)
+        with torch.no_grad():
+            img2 = estimate(img1, img3, network)
         recursion(img1, img2, num-1)
-        images.append(img2.numpy())
+        images.append(img2)
         recursion(img2, img3, num-1)
     # convert to numpy array, the value of each pixel is between 0.0 and 1.0
     images.append(inp1)
@@ -179,11 +182,11 @@ def generate33(inp1, inp2, inp3):
 
 
     # default input is torch tensor
-    inp1, inp2, inp3 = torch.tensor(inp1), torch.tensor(inp2), torch.tensor(inp3)
     recursion(inp1,inp2,3)
     recursion(inp2,inp3,3)
 
-    avg = numpy.average(numpy.array(images),0)
+    avg = torch.stack(images, dim=0)
+    avg = avg.mean(dim=0)
 
     #print(len(images)) # 33
 
@@ -193,7 +196,7 @@ def generate33(inp1, inp2, inp3):
     #        255.0).astype(numpy.uint8)).save("%d.png"%idx)
     #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).numpy().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(numpy.uint8)).save(arguments_strOut)
 
-    return avg
+    return avg.permute(1, 2, 0).numpy()
 
 
 
