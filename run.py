@@ -4,7 +4,7 @@ import torch
 
 import getopt
 import math
-import np as np
+import numpy as np
 import os
 import PIL
 import PIL.Image
@@ -159,10 +159,30 @@ def get_video_interp_model():
     return network
 
 
+def generate_burst(burst, network):
+    def preprocess(img):
+        img = torch.from_numpy(img).float().permute(2,0,1)/255
+        return img
+
+    network.cuda()
+    outputs = []
+    burst = [preprocess(x) for x in burst]
+    for i in range(len(burst)-1):
+        with torch.no_grad():
+            output = estimate(burst[i], burst[i+1], network)
+        outputs.append(output)
+
+    def postprocess(img):
+        return (img.permute(1, 2, 0).numpy()*255).astype(np.uint8)
+
+    outputs = [postprocess(x) for x in outputs]
+    return outputs
+
+
 def generate33(inp1, inp2, inp3, network):
-    inp1 = torch.from_np(inp1).float().permute(2, 0, 1)/255
-    inp2 = torch.from_np(inp2).float().permute(2, 0, 1)/255
-    inp3 = torch.from_np(inp3).float().permute(2, 0, 1)/255
+    inp1 = torch.from_numpy(inp1).float().permute(2, 0, 1)/255
+    inp2 = torch.from_numpy(inp2).float().permute(2, 0, 1)/255
+    inp3 = torch.from_numpy(inp3).float().permute(2, 0, 1)/255
 
     network.cuda()
     images = []
@@ -185,11 +205,8 @@ def generate33(inp1, inp2, inp3, network):
     recursion(inp1,inp2,3)
     recursion(inp2,inp3,3)
 
-    print(inp1.mean())
-    print(images[0].mean())
     avg = torch.stack(images, dim=0)
     avg = avg.mean(dim=0)
-    print(avg.mean())
 
     #print(len(images)) # 33
 
@@ -199,7 +216,7 @@ def generate33(inp1, inp2, inp3, network):
     #        255.0).astype(np.uint8)).save("%d.png"%idx)
     #PIL.Image.fromarray((torch.tensor(avg).clamp(0.0, 1.0).np().transpose(1, 2, 0)[:, :, ::-1] * 255.0).astype(np.uint8)).save(arguments_strOut)
 
-    return (avg.permute(1, 2, 0).np()*255).astype(np.uint8)
+    return (avg.permute(1, 2, 0).numpy()*255).astype(np.uint8)
 
 
 

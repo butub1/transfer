@@ -1,1 +1,1 @@
-srun --mpi=pmi2 -p VI_AIC_1080TI -n 8 --gres=gpu:8 --ntasks-per-node=2 python3 -u $1
+srun --mpi=pmi2 -p  VI_AIC_1080TI -w SH-IDC1-10-5-34-83 -n 1 --gres=gpu:8 --ntasks-per-node=1 python3 -u $1
